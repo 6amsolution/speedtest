@@ -1,108 +1,183 @@
-# PULSETEST — Internet Speed Test
+<div align="center">
 
-A single-page internet speed test built with Next.js 16 (App Router), TypeScript (strict), Tailwind CSS v4, Framer Motion and Lucide icons.
+# ⚡ PULSETEST
 
-It measures **download**, **upload**, **ping** and **jitter** against real servers. There are no random numbers, mock data or hard-coded results: if a measurement can't be made, the UI shows an error.
+### Internet Performance Test
+
+A premium, single-page internet speed test that measures **download**, **upload**, **ping** and **jitter** with real network transfers. No mock data and no random numbers.
+
+![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
+![Framer Motion](https://img.shields.io/badge/Framer_Motion-animations-8B5CF6?logo=framer&logoColor=white)
+
+<img src="docs/screenshots/results.png" alt="PulseTest showing completed test results with the glowing speedometer" width="860" />
+
+</div>
+
+---
+
+## ✨ Features
+
+- **Real speed-test engine:** download, upload, ping and jitter are measured from actual bytes and round trips, timed with `performance.now()`.
+- **Glowing animated speedometer:** an SVG gauge with a gradient arc and needle on a 0–1000 Mbps scale, plus smooth spring-animated live readings.
+- **Live test flow:** Ping → Jitter → Download → Upload → Results, with a phase stepper, progress bar and a **Stop** button.
+- **Smart server selection:** every server's latency is measured live from your browser, the best one is picked automatically, and unreachable servers are never shown as available.
+- **Results you can share:** a one-click **Copy results** button and a **Retest** button.
+- **Built for mobile:** a responsive layout tested on phone and desktop.
+- **Accessible:** keyboard-friendly modal with focus trap and Escape to close, screen-reader announcements, and support for reduced motion.
+- **Protected API:** input validation, upload size limits and per-IP rate limiting.
+- **SEO-ready:** metadata, Open Graph and Twitter cards.
+
+<div align="center">
+<img src="docs/screenshots/server-selector.png" alt="Server selection modal with live latency" width="560" />
+&nbsp;
+<img src="docs/screenshots/mobile.png" alt="Speed test running on mobile" width="220" />
+</div>
+
+## 🚀 Getting started
+
+**Requirements:** Node.js 20+ and npm.
 
 ```bash
+# 1. Install dependencies
 npm install
-npm run dev        # http://localhost:3000
-npm run build && npm start
+
+# 2. (Optional) configure environment variables
+cp .env.example .env.local
+
+# 3. Start the dev server
+npm run dev
 ```
 
-## How measurement works
+Open **http://localhost:3000** and press **START**.
 
-All measurement runs in the browser ([src/lib/speedtest.ts](src/lib/speedtest.ts)); the math is in [src/lib/calculations.ts](src/lib/calculations.ts).
+### Scripts
 
-| Metric   | Method |
-| -------- | ------ |
-| Ping     | 1 discarded warm-up request (pays for DNS/TCP/TLS), then 10 timed round trips. Uses Resource Timing (`responseStart − requestStart`) when the server sends `Timing-Allow-Origin`, otherwise `performance.now()` wall time. Reports avg / min / max. |
-| Jitter   | 10 more round trips on the warm connection. Jitter = mean absolute difference between consecutive samples (all 20). |
-| Download | 4 parallel streamed `fetch`es for 10 s. Every byte read from the response body is counted. Request sizes grow 1 MB → 4 MB → … up to the server limit. The final speed excludes the first 1.5 s of TCP ramp-up. |
-| Upload   | 3 parallel `XMLHttpRequest` POSTs of random (incompressible) data for 8 s, counted via `upload.onprogress`. The same ramp-up exclusion applies. |
+| Command | What it does |
+| ------- | ------------ |
+| `npm run dev` | Start the development server |
+| `npm run build` | Create a production build |
+| `npm start` | Run the production build |
+| `npm run lint` | Lint with ESLint |
+| `npx tsc --noEmit` | Type-check the project |
 
-Safeguards:
+## 🧪 How it works
 
-- **No caching:** a cache-busting query param on every request, `cache: "no-store"`, and the server sends `Cache-Control: no-store, no-transform`, so proxies can't cache or compress payloads.
-- **Timeouts:** per-request timeouts, plus a stall detector that aborts the download if no bytes arrive for 6 s.
-- **Cancellation:** the Stop button aborts every in-flight request through one `AbortController`.
-- **Bandwidth caps:** at most 300 MB down and 150 MB up per test, so very fast links finish early instead of transferring gigabytes.
-- **Server availability:** servers are probed live from the browser. Unreachable servers are shown as *Unreachable* and can't be selected. The best (lowest-latency) reachable server is selected automatically.
+Measurement runs entirely in the browser ([src/lib/speedtest.ts](src/lib/speedtest.ts)), and the formulas live in [src/lib/calculations.ts](src/lib/calculations.ts).
 
-## Upload testing needs a real backend
+| Metric | How it's measured |
+| ------ | ----------------- |
+| **Ping** | One warm-up request is discarded (it pays for DNS, TCP and TLS setup). Then 10 timed round trips give the average, minimum and maximum. |
+| **Jitter** | 10 more round trips. Jitter is the average difference between consecutive ping samples. |
+| **Download** | 4 parallel streaming connections run for about 10 s, and every byte received is counted. The first 1.5 s of TCP ramp-up is excluded from the final speed. |
+| **Upload** | 3 parallel connections POST random, incompressible data for about 8 s, and bytes sent are counted from upload progress events. |
 
-Browsers can't measure upload speed against a static file host. Accurate upload testing **requires an endpoint that accepts and discards POST bodies**. This app ships one:
+**Built-in safeguards:**
+- **Caching is disabled everywhere.** Every request gets a cache-busting parameter and uses `no-store`, and the server sends `no-transform` so proxies can't cache or compress payloads.
+- **Timeouts and stall detection:** a stalled download is aborted if no data arrives for 6 seconds.
+- **Clean cancellation:** the Stop button aborts every request at once.
+- **Bandwidth caps:** a test transfers at most 300 MB down and 150 MB up, so fast connections don't waste data.
 
-| Route | Purpose |
-| ----- | ------- |
-| `GET  /api/speedtest/ping` | Empty, uncacheable response |
-| `GET  /api/speedtest/download?bytes=N` | Streams exactly N bytes of random data (validated, max 25 MB by default) |
-| `POST /api/speedtest/upload` | Reads and discards the body, returns `{ received, durationMs }`. Rejects bodies over 8 MB with `413` (checked from `Content-Length` *and* while streaming chunked bodies) |
+## 🌍 Test servers
 
-All three are rate limited per client IP ([src/lib/rate-limit.ts](src/lib/rate-limit.ts)): requests per minute plus a byte budget per minute, answered with `429` and `Retry-After`.
+Two real servers are available by default:
 
-> **Deployment caveats:**
-> - The limiter is in-memory, so its limits apply per server instance. On serverless or multi-instance hosting, also enable your platform's WAF/rate limiting, or swap in a shared store such as Redis.
-> - The client IP comes from `X-Forwarded-For` / `X-Real-IP`. Only expose the app behind a proxy that sets these headers, otherwise clients can spoof them.
-> - Serverless platforms cap request body size and duration. Keep `SPEEDTEST_MAX_UPLOAD_BYTES` below your platform's limit (Vercel functions accept about 4.5 MB bodies).
+| Server | Description |
+| ------ | ----------- |
+| **PulseTest Origin** | This app's own API routes (see below) |
+| **Cloudflare Edge** | Cloudflare's public speed-test service. Its location (e.g. `KHI`) is detected live. |
 
-## Servers
+### Adding your own servers
 
-With no configuration, two real servers are offered:
-
-1. **PulseTest Origin:** this deployment's own API routes above.
-2. **Cloudflare Edge:** `speed.cloudflare.com` (`__down` / `__up`), which is CORS-enabled. Its point of presence (e.g. `KHI`) is read live from the `cf-meta-colo` response header.
-
-### Configuration
-
-Copy [.env.example](.env.example) to `.env.local`. The server list is resolved when the page is prerendered, so **rebuild after changing it**.
+Set `SPEEDTEST_SERVERS` in `.env.local` to a JSON array, then **rebuild** the app:
 
 ```bash
-SPEEDTEST_SERVERS='[
-  {
-    "id": "fra",
-    "name": "Frankfurt",
-    "provider": "Acme Hosting",
-    "city": "Frankfurt",
-    "country": "Germany",
-    "pingUrl": "https://fra.example.com/api/speedtest/ping",
-    "downloadUrl": "https://fra.example.com/api/speedtest/download?bytes={bytes}",
-    "uploadUrl": "https://fra.example.com/api/speedtest/upload",
-    "maxDownloadBytes": 26214400,
-    "maxUploadBytes": 8388608
-  }
-]'
+SPEEDTEST_SERVERS='[{
+  "id": "fra",
+  "name": "Frankfurt",
+  "provider": "Acme Hosting",
+  "city": "Frankfurt",
+  "country": "Germany",
+  "pingUrl": "https://fra.example.com/api/speedtest/ping",
+  "downloadUrl": "https://fra.example.com/api/speedtest/download?bytes={bytes}",
+  "uploadUrl": "https://fra.example.com/api/speedtest/upload"
+}]'
 ```
 
-- `downloadUrl` must contain `{bytes}`. URLs may be absolute (`http(s)`) or relative (`/…`). Invalid entries are dropped, and if the JSON itself is invalid the defaults are used.
-- Optional fields: `locationHeader` (a CORS-exposed response header naming the serving location) and `locationFrom` (`"ping"` or `"upload"`).
-- The origin server is always included unless `SPEEDTEST_INCLUDE_ORIGIN=false`.
-- Remote servers must allow CORS for `GET`/`POST` from your site. To use **another PulseTest deployment** as a remote server, set `SPEEDTEST_CORS_ORIGIN` on that deployment.
-- Send `Timing-Allow-Origin` from remote servers for the most precise ping. Without it, ping falls back to wall-clock timing, which is slightly higher.
+- `downloadUrl` must include the `{bytes}` placeholder.
+- Remote servers must allow CORS requests from your site.
+- To use another PulseTest deployment as a server, set `SPEEDTEST_CORS_ORIGIN` on that deployment.
 
-## Project structure
+### Environment variables
+
+| Variable | Default | Purpose |
+| -------- | ------- | ------- |
+| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` | Canonical / Open Graph URL |
+| `SPEEDTEST_SERVERS` | *(Origin + Cloudflare)* | Custom server list (JSON) |
+| `SPEEDTEST_INCLUDE_ORIGIN` | `true` | Show this app's own server alongside custom ones |
+| `SPEEDTEST_ORIGIN_NAME` / `_CITY` / `_COUNTRY` / `_REGION` | — | How the origin server is labelled |
+| `SPEEDTEST_MAX_DOWNLOAD_BYTES` | `26214400` (25 MB) | Max size per download request |
+| `SPEEDTEST_MAX_UPLOAD_BYTES` | `8388608` (8 MB) | Max size per upload request |
+| `SPEEDTEST_CORS_ORIGIN` | — | Let other sites use this app as a test server |
+
+## 🔌 API
+
+| Endpoint | Description |
+| -------- | ----------- |
+| `GET /api/speedtest/ping` | Empty, uncacheable response for latency |
+| `GET /api/speedtest/download?bytes=N` | Streams exactly `N` bytes of random data (validated) |
+| `POST /api/speedtest/upload` | Reads and discards the body, then returns `{ received, durationMs }`. Oversized bodies get `413`. |
+
+All endpoints are **rate limited per IP** (requests and bytes per minute) and answer with `429` and `Retry-After` when the limit is hit.
+
+> **ℹ️ Upload testing needs a real backend.** A browser can't measure upload speed against static files, so it needs an endpoint that accepts and discards data. This app includes one (`/api/speedtest/upload`). It works whenever the app runs on a server (`npm start`, Vercel, Docker and so on), but not on a static-only host.
+
+## ☁️ Deployment
+
+Deploy like any Next.js app: Vercel, Netlify, a Node server or Docker. Before going live:
+
+- **Set your site URL:** `NEXT_PUBLIC_SITE_URL` should be your real domain.
+- **On Vercel, lower the upload limit:** set `SPEEDTEST_MAX_UPLOAD_BYTES` below about 4.5 MB to stay under the function body limit.
+- **Rate limits are per server instance.** The built-in limiter is in-memory, so on serverless or multi-instance hosting also enable your platform's rate limiting or firewall.
+- **Run behind a proxy** that sets `X-Forwarded-For` (Vercel and most hosts do), so client IPs can't be spoofed.
+
+## 📁 Project structure
 
 ```
 src/
-  app/
-    page.tsx                 single page (Server Component)
-    layout.tsx               fonts, SEO metadata, viewport
-    globals.css              theme tokens + utilities
-    icon.svg                 favicon
-    api/speedtest/{ping,download,upload}/route.ts
-  components/
-    speed-test-app.tsx       client root: shares server selection
-    speed-test.tsx           test state machine + controls
-    speedometer.tsx          SVG gauge (spring-animated, no re-renders per frame)
-    server-selector.tsx      accessible modal: search, live latency, auto-select
-    result-cards.tsx         download / upload / ping / jitter cards
-    navbar.tsx, hero.tsx, info-section.tsx, background.tsx, logo.tsx, toast.tsx
-  lib/
-    speedtest.ts             browser measurement engine
-    calculations.ts          pure math (Mbps, jitter, gauge scale, formatting)
-    servers.ts               server config + validation (server-only)
-    rate-limit.ts, http.ts   API protection + headers (server-only)
-    use-server-probes.ts     live reachability/latency probing hook
-    utils.ts
-  types/speedtest.ts
+├── app/
+│   ├── page.tsx                  # The single page (Server Component)
+│   ├── layout.tsx                # Fonts, SEO metadata, viewport
+│   ├── globals.css               # Theme colours & utilities
+│   └── api/speedtest/
+│       ├── ping/route.ts
+│       ├── download/route.ts
+│       └── upload/route.ts
+├── components/
+│   ├── speed-test-app.tsx        # Client root (shares server selection)
+│   ├── speed-test.tsx            # Test flow, controls, results
+│   ├── speedometer.tsx           # Animated SVG gauge
+│   ├── server-selector.tsx       # Server modal with search & live latency
+│   ├── result-cards.tsx          # Download / Upload / Ping / Jitter cards
+│   └── navbar, hero, info-section, background, logo, toast
+├── lib/
+│   ├── speedtest.ts              # Browser measurement engine
+│   ├── calculations.ts           # Mbps, jitter & formatting maths
+│   ├── servers.ts                # Server config & validation
+│   ├── rate-limit.ts, http.ts    # API protection & headers
+│   └── use-server-probes.ts      # Live server latency probing
+└── types/speedtest.ts
 ```
+
+## 🛠️ Tech stack
+
+[Next.js 16](https://nextjs.org) (App Router) · [TypeScript](https://www.typescriptlang.org) (strict) · [Tailwind CSS 4](https://tailwindcss.com) · [Framer Motion](https://motion.dev) · [Lucide](https://lucide.dev)
+
+---
+
+<div align="center">
+
+Results depend on your device, browser, network and the selected server.
+
+</div>
