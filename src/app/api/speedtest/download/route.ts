@@ -12,7 +12,7 @@ import { jsonError, preflight, speedTestHeaders } from "@/lib/http";
  */
 
 const BLOCK_SIZE = 1024 * 1024;
-const SLICE_SIZE = 64 * 1024;
+const SLICE_SIZE = 256 * 1024;
 let block: Buffer | null = null;
 
 function randomBlock(): Buffer {
