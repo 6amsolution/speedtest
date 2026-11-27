@@ -153,8 +153,11 @@ export async function probeServer(
   server: SpeedTestServer,
   signal: AbortSignal,
 ): Promise<{ latencyMs: number; liveLocation?: string }> {
+  // Fail fast: if the connection warm-up fails, the server is unreachable.
+  await timedRequest(server.pingUrl, signal, 3500);
   const { samples, response } = await measureLatency(server, 3, signal, undefined, {
     timeoutMs: 3000,
+    warmup: false,
   });
   if (samples.length === 0) {
     throw new SpeedTestError("No response from server");
