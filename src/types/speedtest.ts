@@ -28,6 +28,11 @@ export interface SpeedTestServer {
    * request was actually served from, e.g. Cloudflare's `cf-meta-colo`.
    */
   locationHeader?: string;
+  /**
+   * Which endpoint returns `locationHeader`: the ping URL (default) or a
+   * tiny empty POST to the upload URL (Cloudflare only exposes it there).
+   */
+  locationFrom?: "ping" | "upload";
 }
 
 export type ProbeStatus = "probing" | "online" | "offline";

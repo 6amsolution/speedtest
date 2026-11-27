@@ -162,9 +162,39 @@ export async function probeServer(
   if (samples.length === 0) {
     throw new SpeedTestError("No response from server");
   }
-  const liveLocation =
-    server.locationHeader && response ? response.headers.get(server.locationHeader) ?? undefined : undefined;
+  const liveLocation = await readLiveLocation(server, response, signal);
   return { latencyMs: Math.min(...samples), liveLocation };
+}
+
+/** Reads where the server says it is serving from. Best-effort: never throws. */
+async function readLiveLocation(
+  server: SpeedTestServer,
+  pingResponse: Response | undefined,
+  signal: AbortSignal,
+): Promise<string | undefined> {
+  const header = server.locationHeader;
+  if (!header) return undefined;
+  if (server.locationFrom !== "upload") {
+    return pingResponse?.headers.get(header)?.slice(0, 40) || undefined;
+  }
+  const link = linkedController([signal], 3000);
+  try {
+    // Empty text/plain POST: a CORS "simple request", no preflight needed.
+    const response = await fetch(bustCache(server.uploadUrl), {
+      method: "POST",
+      body: "",
+      headers: { "Content-Type": "text/plain" },
+      cache: "no-store",
+      credentials: "omit",
+      signal: link.signal,
+    });
+    await response.arrayBuffer();
+    return response.headers.get(header)?.slice(0, 40) || undefined;
+  } catch {
+    return undefined;
+  } finally {
+    link.dispose();
+  }
 }
 
 /* ------------------------------------------------------------------ */

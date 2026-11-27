@@ -6,7 +6,7 @@ import { jsonError, preflight, speedTestHeaders } from "@/lib/http";
 /**
  * Download endpoint: streams exactly `?bytes=N` bytes of incompressible data.
  *
- * A 1 MiB random block is generated once per process and streamed in 64 KiB
+ * A 1 MiB random block is generated once per process and streamed in 256 KiB
  * slices, so serving a test costs almost no CPU. Combined with
  * `Cache-Control: no-transform`, proxies cannot shrink the payload.
  */

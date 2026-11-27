@@ -56,8 +56,10 @@ const CLOUDFLARE: SpeedTestServer = {
   uploadUrl: "https://speed.cloudflare.com/__up",
   maxDownloadBytes: 25 * MB,
   maxUploadBytes: 8 * MB,
-  // Exposed via Access-Control-Expose-Headers; IATA code of the serving PoP.
+  // IATA code of the serving PoP. Only `__up` exposes it to browsers via
+  // Access-Control-Expose-Headers, so it is read from an empty POST there.
   locationHeader: "cf-meta-colo",
+  locationFrom: "upload",
 };
 
 /* ------------------------------------------------------------------ */
@@ -107,6 +109,7 @@ export function parseServer(input: unknown, index: number): SpeedTestServer | nu
     maxDownloadBytes: positiveInt(raw.maxDownloadBytes, 25 * MB),
     maxUploadBytes: positiveInt(raw.maxUploadBytes, 8 * MB),
     locationHeader: optionalString(raw.locationHeader, 64),
+    locationFrom: raw.locationFrom === "upload" ? "upload" : "ping",
   };
 }
 
