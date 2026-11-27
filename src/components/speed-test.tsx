@@ -432,7 +432,7 @@ function GaugeCenter({
   }
 
   // idle / cancelled / error → start button
-  const label = phase === "error" ? "Try again" : phase === "cancelled" ? "Restart" : "Start";
+  const label = phase === "error" ? "Retry" : phase === "cancelled" ? "Restart" : "Start";
   return (
     <div className="relative grid place-items-center">
       {canStart && (
@@ -490,7 +490,7 @@ function PhaseStepper({ phase, progress }: { phase: TestPhase; progress: number 
 
   return (
     <div className="w-full">
-      <ol className="flex items-center justify-between text-[11px] font-medium uppercase tracking-[0.12em] sm:text-xs">
+      <ol className="flex items-center justify-between text-[10px] font-medium uppercase tracking-[0.06em] sm:text-xs sm:tracking-[0.12em]">
         {STEPS.map((step, i) => (
           <li
             key={step.key}
