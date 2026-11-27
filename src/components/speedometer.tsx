@@ -170,18 +170,9 @@ export function Speedometer({ mbps, tone, children, showReadout = false, label, 
           transform={`rotate(${START} ${C} ${C})`}
           className={cn("transition-opacity duration-500", active ? "opacity-100" : "opacity-0")}
         >
-          <path d={`M ${C - 4} ${C} L ${C} ${C - R + 34} L ${C + 4} ${C} Z`} fill="url(#needle-grad)" />
+          <path d={`M ${C - 3.5} ${C - 96} L ${C} ${C - R + 34} L ${C + 3.5} ${C - 96} Z`} fill="url(#needle-grad)" />
           <circle cx={C} cy={C - R + 34} r="3" fill="#F8FAFC" filter="url(#gauge-glow)" />
         </g>
-        <circle
-          cx={C}
-          cy={C}
-          r="9"
-          fill="#111827"
-          stroke="url(#gauge-grad)"
-          strokeWidth="3"
-          className={cn("transition-opacity duration-500", active ? "opacity-100" : "opacity-0")}
-        />
       </svg>
 
       {/* Centre content */}

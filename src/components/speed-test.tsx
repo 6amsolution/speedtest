@@ -179,7 +179,11 @@ export function SpeedTest({ server, probes, locating, onRunningChange, onOpenSer
       await navigator.clipboard.writeText(text);
       notify({ kind: "success", title: "Results copied to clipboard" });
     } catch {
-      notify({ kind: "error", title: "Couldn't copy results", description: "Clipboard access was blocked by the browser." });
+      notify({
+        kind: "error",
+        title: "Couldn't copy results",
+        description: "Clipboard access was blocked by the browser.",
+      });
     }
   }, [state.results, notify]);
 
@@ -223,120 +227,129 @@ export function SpeedTest({ server, probes, locating, onRunningChange, onOpenSer
         : phase === "complete"
           ? "complete"
           : "idle";
-  const gaugeMbps = phase === "download" || phase === "upload" ? state.liveMbps : phase === "complete" ? (download?.mbps ?? 0) : 0;
+  const gaugeMbps =
+    phase === "download" || phase === "upload" ? state.liveMbps : phase === "complete" ? (download?.mbps ?? 0) : 0;
   const lastSample = samples.length ? samples[samples.length - 1] : null;
   const shownServer = running ? state.testedServer : server;
   const probe = shownServer ? probes[shownServer.id] : undefined;
 
   return (
-    <section aria-labelledby="test-title" className="mx-auto mt-8 w-full max-w-5xl px-4 sm:mt-12 sm:px-5">
+    <section aria-labelledby="test-title" className="mx-auto mt-8 w-full max-w-6xl px-4 sm:mt-10 sm:px-5">
       <h2 id="test-title" className="sr-only">
         Speed test
       </h2>
       <div className="glass relative overflow-hidden rounded-[28px] p-4 sm:p-8">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan/50 to-transparent" />
 
-        <ResultCards metrics={metrics} highlight={phase === "complete"} />
-
         {/* Live status for screen readers */}
         <p className="sr-only" role="status" aria-live="polite">
           {phaseAnnouncement(state)}
         </p>
 
-        <div className="relative mt-6 sm:mt-8">
-          <Speedometer
-            mbps={gaugeMbps}
-            tone={tone}
-            showReadout={phase === "download" || phase === "upload"}
-            label={phase === "download" ? "Download" : phase === "upload" ? "Upload" : undefined}
-          >
-            <GaugeCenter
-              phase={phase}
-              lastSample={lastSample}
-              results={state.results}
-              canStart={!!server}
-              locating={locating}
-              onStart={start}
-            />
-          </Speedometer>
-        </div>
+        <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-10">
+          <div className="min-w-0">
+            <div className="relative">
+              <Speedometer
+                mbps={gaugeMbps}
+                tone={tone}
+                showReadout={phase === "download" || phase === "upload"}
+                label={phase === "download" ? "Download" : phase === "upload" ? "Upload" : undefined}
+              >
+                <GaugeCenter
+                  phase={phase}
+                  lastSample={lastSample}
+                  results={state.results}
+                  canStart={!!server}
+                  locating={locating}
+                  onStart={start}
+                />
+              </Speedometer>
+            </div>
 
-        {/* Controls */}
-        <div className="mt-2 flex min-h-[112px] flex-col items-center justify-start gap-4">
-          <AnimatePresence mode="wait" initial={false}>
-            {running ? (
-              <motion.div
-                key="running"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                className="flex w-full max-w-md flex-col items-center gap-4"
-              >
-                <PhaseStepper phase={phase} progress={state.progress} />
-                <button
-                  type="button"
-                  onClick={stop}
-                  className="inline-flex items-center gap-2 rounded-full border border-danger/40 bg-danger/10 px-5 py-2.5 text-sm font-semibold text-fg transition hover:bg-danger/20 focus-visible:outline-danger"
-                >
-                  <Square className="h-3.5 w-3.5 fill-current text-danger" aria-hidden />
-                  Stop test
-                </button>
-              </motion.div>
-            ) : phase === "complete" ? (
-              <motion.div
-                key="complete"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                className="flex flex-wrap items-center justify-center gap-3"
-              >
-                <button
-                  type="button"
-                  onClick={start}
-                  disabled={!server}
-                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-cyan px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_40px_-10px_rgba(139,92,246,0.8)] transition hover:brightness-110 disabled:opacity-50"
-                >
-                  <RotateCcw className="h-4 w-4" aria-hidden />
-                  Retest
-                </button>
-                <button
-                  type="button"
-                  onClick={copyResults}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-fg transition hover:border-cyan/50 hover:bg-cyan/10"
-                >
-                  <Copy className="h-4 w-4" aria-hidden />
-                  Copy results
-                </button>
-              </motion.div>
-            ) : (
-              <motion.p
-                key="idle"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className={cn("max-w-md text-center text-sm", phase === "error" ? "text-danger" : "text-muted")}
-              >
-                {phase === "error"
-                  ? state.error
-                  : phase === "cancelled"
-                    ? "Test stopped. Press start to run it again."
-                    : "The test takes about 25 seconds and transfers up to a few hundred MB on fast connections."}
-              </motion.p>
-            )}
-          </AnimatePresence>
+            {/* Controls */}
+            <div className="mt-2 flex min-h-[96px] flex-col items-center justify-start gap-4">
+              <AnimatePresence mode="wait" initial={false}>
+                {running ? (
+                  <motion.div
+                    key="running"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="flex w-full max-w-md flex-col items-center gap-4"
+                  >
+                    <PhaseStepper phase={phase} progress={state.progress} />
+                    <button
+                      type="button"
+                      onClick={stop}
+                      className="inline-flex items-center gap-2 rounded-full border border-danger/40 bg-danger/10 px-5 py-2.5 text-sm font-semibold text-fg transition hover:bg-danger/20 focus-visible:outline-danger"
+                    >
+                      <Square className="h-3.5 w-3.5 fill-current text-danger" aria-hidden />
+                      Stop test
+                    </button>
+                  </motion.div>
+                ) : phase === "complete" ? (
+                  <motion.div
+                    key="complete"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="flex flex-wrap items-center justify-center gap-3"
+                  >
+                    <button
+                      type="button"
+                      onClick={start}
+                      disabled={!server}
+                      className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-cyan px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_40px_-10px_rgba(139,92,246,0.8)] transition hover:brightness-110 disabled:opacity-50"
+                    >
+                      <RotateCcw className="h-4 w-4" aria-hidden />
+                      Retest
+                    </button>
+                    <button
+                      type="button"
+                      onClick={copyResults}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-fg transition hover:border-cyan/50 hover:bg-cyan/10"
+                    >
+                      <Copy className="h-4 w-4" aria-hidden />
+                      Copy results
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.p
+                    key="idle"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className={cn("max-w-md text-center text-sm", phase === "error" ? "text-danger" : "text-muted")}
+                  >
+                    {phase === "error"
+                      ? state.error
+                      : phase === "cancelled"
+                        ? "Test stopped. Press start to run it again."
+                        : "The test takes about 25 seconds and transfers up to a few hundred MB on fast connections."}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          <ResultCards metrics={metrics} highlight={phase === "complete"} />
         </div>
 
         {/* Selected server */}
-        <div className="mt-2 flex flex-col items-center justify-center gap-2 border-t border-white/[0.06] pt-5 text-sm sm:flex-row sm:gap-3">
+        <div className="mt-6 flex flex-col items-center justify-center gap-2 border-t border-white/[0.06] pt-5 text-sm sm:flex-row sm:gap-3">
           <span className="flex items-center gap-2 text-muted">
             <Server className="h-4 w-4 text-cyan" aria-hidden />
             Testing with:
-            <span className="font-medium text-fg">{shownServer ? shownServer.name : locating ? "Finding the best server…" : "No server available"}</span>
+            <span className="font-medium text-fg">
+              {shownServer ? shownServer.name : locating ? "Finding the best server…" : "No server available"}
+            </span>
           </span>
           {shownServer && (
             <span className="text-xs text-muted">
               {describeLocation(shownServer, probe)}
-              {probe?.latencyMs != null && <span className="ml-2 font-mono text-success">{formatMs(probe.latencyMs)} ms</span>}
+              {probe?.latencyMs != null && (
+                <span className="ml-2 font-mono text-success">{formatMs(probe.latencyMs)} ms</span>
+              )}
             </span>
           )}
           <button
@@ -408,7 +421,9 @@ function GaugeCenter({
           <Check className="h-5 w-5" aria-hidden />
         </span>
         <span className="text-xs font-medium uppercase tracking-[0.2em] text-muted">Download</span>
-        <span className="font-mono text-5xl font-semibold text-fg tabular sm:text-6xl">{formatMbps(results.download.mbps)}</span>
+        <span className="font-mono text-5xl font-semibold text-fg tabular sm:text-6xl">
+          {formatMbps(results.download.mbps)}
+        </span>
         <span className="mt-1 text-sm text-muted">
           Mbps · <span className="text-primary-soft">↑ {formatMbps(results.upload.mbps)}</span>
         </span>
@@ -422,8 +437,14 @@ function GaugeCenter({
     <div className="relative grid place-items-center">
       {canStart && (
         <>
-          <span aria-hidden className="absolute h-40 w-40 animate-pulse-ring rounded-full border border-cyan/40 sm:h-48 sm:w-48" />
-          <span aria-hidden className="absolute h-40 w-40 animate-pulse-ring rounded-full border border-primary/40 [animation-delay:1.2s] sm:h-48 sm:w-48" />
+          <span
+            aria-hidden
+            className="absolute h-40 w-40 animate-pulse-ring rounded-full border border-cyan/40 sm:h-48 sm:w-48"
+          />
+          <span
+            aria-hidden
+            className="absolute h-40 w-40 animate-pulse-ring rounded-full border border-primary/40 [animation-delay:1.2s] sm:h-48 sm:w-48"
+          />
         </>
       )}
       <motion.button
@@ -452,7 +473,9 @@ function GaugeCenter({
           ) : (
             <>
               <LoaderCircle className={cn("h-7 w-7 text-cyan", locating && "animate-spin")} aria-hidden />
-              <span className="mt-2 px-6 text-center text-xs text-muted">{locating ? "Finding best server…" : "No reachable server"}</span>
+              <span className="mt-2 px-6 text-center text-xs text-muted">
+                {locating ? "Finding best server…" : "No reachable server"}
+              </span>
             </>
           )}
         </span>

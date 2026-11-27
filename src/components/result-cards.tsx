@@ -30,7 +30,7 @@ function format(key: MetricKey, value: number | null): string {
 
 export function ResultCards({ metrics, highlight = false }: { metrics: MetricValue[]; highlight?: boolean }) {
   return (
-    <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4" aria-label="Test metrics">
+    <ul className="grid grid-cols-2 gap-3 sm:gap-4" aria-label="Test metrics">
       {metrics.map((metric, index) => (
         <ResultCard key={metric.key} metric={metric} highlight={highlight} index={index} />
       ))}
